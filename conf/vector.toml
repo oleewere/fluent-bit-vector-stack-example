@@ -1,0 +1,30 @@
+data_dir = "/var/lib/vector"
+
+[api]
+enabled = false
+
+[sources.fluent_bit_source]
+type = "fluent"
+address = "0.0.0.0:24284"
+
+[sources.fluent_bit_raw_source]
+type = "fluent"
+address = "0.0.0.0:24285"
+
+[sinks.es_fluent_bit]
+type = "elasticsearch"
+inputs = [ "fluent_bit_source" ]
+endpoint = "http://elasticsearch:9200"
+mode = "bulk"
+compression = "none"
+
+[sinks.raw_message_kafka]
+type = "kafka"
+inputs = [ "fluent_bit_raw_source" ]
+bootstrap_servers = "kafka:9092"
+key_field = "message_key"
+topic = "topic-1234"
+compression = "none"
+
+  [sinks.raw_message_kafka.encoding]
+  codec = "json"

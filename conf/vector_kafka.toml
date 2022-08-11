@@ -1,0 +1,19 @@
+data_dir = "/var/lib/vector"
+
+[api]
+enabled = false
+
+[sources.kafka_read_raw_data]
+type = "kafka"
+bootstrap_servers = "kafka:9092"
+group_id = "consumer-group-name"
+key_field = "message_key"
+topics = [ "^(topic)-.+" ]
+
+[sinks.console_raw_data]
+type = "console"
+inputs = [ "kafka_read_raw_data" ]
+target = "stdout"
+
+  [sinks.console_raw_data.encoding]
+  codec = "json"

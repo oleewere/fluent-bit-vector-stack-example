@@ -1,0 +1,114 @@
+version: '3'
+services:
+  loggenerator:
+    image: docker.io/oleewere/loggenerator:v0.1.0
+    container_name: loggenerator
+    networks:
+      - fluent-bit-vector-stack-network
+    environment:
+      - JSON_FORMAT=true
+      - DOCKER_FORMAT=true
+      - SLEEP_INTERVAL_SEC=3
+      - REPEAT_MESSAGES_BETWEEN_SLEEPS=5
+      - USE_LOGFILE=true
+      - LOGFILE=/sample/loggenerator.log
+    volumes:
+    - ./sample:/sample
+  fluentbit:
+    image: public.ecr.aws/aws-observability/aws-for-fluent-bit:2.23.0
+    hostname: fluentbit
+    container_name: fluentbit
+    networks:
+      - fluent-bit-vector-stack-network
+    volumes:
+      - ./conf/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./sample:/sample
+    depends_on:
+     - loggenerator
+     - vector
+  vector:
+    image: docker.io/timberio/vector:0.23.3-debian
+    container_name: vector
+    networks:
+      - fluent-bit-vector-stack-network
+    ports:
+      - 24284:24284
+      - 24285:24285
+    volumes:
+      - ./conf/vector.toml:/etc/vector/vector.toml
+    depends_on:
+      - zookeeper
+      - kafka
+      - elasticsearch
+  vector_kafka:
+    image: docker.io/timberio/vector:0.23.3-debian
+    container_name: vector_kafka
+    networks:
+      - fluent-bit-vector-stack-network
+    volumes:
+      - ./conf/vector_kafka.toml:/etc/vector/vector.toml
+    depends_on:
+      - zookeeper
+      - kafka
+      - vector
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: zookeeper
+    networks:
+      - fluent-bit-vector-stack-network
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 22181:2181
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - 9092:9092
+      - 29092:29092
+    networks:
+      - fluent-bit-vector-stack-network
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.0
+    container_name: elasticsearch
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+    networks:
+      - fluent-bit-vector-stack-network
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    cap_add:
+      - IPC_LOCK
+    ports:
+      - 9200:9200
+      - 9300:9300
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:7.4.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - fluent-bit-vector-stack-network
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+networks:
+  fluent-bit-vector-stack-network:
+    driver: bridge
