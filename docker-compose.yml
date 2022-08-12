@@ -6,12 +6,26 @@ services:
     networks:
       - fluent-bit-vector-stack-network
     environment:
-      - JSON_FORMAT=true
+      - JSON_FORMAT=false
       - DOCKER_FORMAT=true
       - SLEEP_INTERVAL_SEC=3
       - REPEAT_MESSAGES_BETWEEN_SLEEPS=5
       - USE_LOGFILE=true
       - LOGFILE=/sample/loggenerator.log
+    volumes:
+    - ./sample:/sample
+  loggeneratorjson:
+    image: docker.io/oleewere/loggenerator:v0.1.0
+    container_name: loggeneratorjson
+    networks:
+      - fluent-bit-vector-stack-network
+    environment:
+      - JSON_FORMAT=true
+      - DOCKER_FORMAT=true
+      - SLEEP_INTERVAL_SEC=3
+      - REPEAT_MESSAGES_BETWEEN_SLEEPS=5
+      - USE_LOGFILE=true
+      - LOGFILE=/sample/loggenerator.json.log
     volumes:
     - ./sample:/sample
   fluentbit:
@@ -25,6 +39,7 @@ services:
       - ./sample:/sample
     depends_on:
      - loggenerator
+     - loggeneratorjson
      - vector
   vector:
     image: docker.io/timberio/vector:0.23.3-debian
@@ -43,6 +58,10 @@ services:
   vector_kafka:
     image: docker.io/timberio/vector:0.23.3-debian
     container_name: vector_kafka
+    environment:
+      - "AWS_ACCESS_KEY_ID=foo"
+      - "AWS_SECRET_ACCESS_KEY=bar"
+      - "AWS_DEFAULT_REGION=us-east-1"
     networks:
       - fluent-bit-vector-stack-network
     volumes:
@@ -51,6 +70,7 @@ services:
       - zookeeper
       - kafka
       - vector
+      - kinesis
   zookeeper:
     image: confluentinc/cp-zookeeper:7.2.1
     container_name: zookeeper
@@ -109,6 +129,24 @@ services:
       - 5601:5601
     depends_on:
       - elasticsearch
+  kinesis:
+    image: "ghcr.io/etspaceman/kinesis-mock:0.2.5"
+    container_name: kinesis
+    networks:
+      - fluent-bit-vector-stack-network
+    environment:
+      - "LOG_LEVEL=TRACE"
+      - "INITIALIZE_STREAMS=stream1:3,stream2:2,stream3:1,stream4:2,stream5:3,stream6:5,stream7:5,stream8:3,stream9:1,stream10:3,stream11:2"
+      - "SHOULD_PERSIST_DATA=true"
+      - "PERSIST_PATH=/tmp/datadir1"
+    healthcheck:
+      test: "curl --fail http://localhost:4568/healthcheck || exit 1"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "4567:4567"
+      - "4568:4568"
 networks:
   fluent-bit-vector-stack-network:
     driver: bridge

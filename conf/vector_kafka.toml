@@ -10,10 +10,13 @@ group_id = "consumer-group-name"
 key_field = "message_key"
 topics = [ "^(topic)-.+" ]
 
-[sinks.console_raw_data]
-type = "console"
+[sinks.kinesis_stream]
+type = "aws_kinesis_streams"
 inputs = [ "kafka_read_raw_data" ]
-target = "stdout"
+partition_key_field = "message_key"
+compression = "none"
+endpoint = "http://kinesis:4568"
+stream_name = "stream1"
 
-  [sinks.console_raw_data.encoding]
+  [sinks.kinesis_stream.encoding]
   codec = "json"
