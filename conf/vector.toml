@@ -11,15 +11,15 @@ address = "0.0.0.0:24284"
 type = "fluent"
 address = "0.0.0.0:24285"
 
-[transforms.remap_keys_for_es]
+[transforms.remap_example]
 type = "remap"
 inputs = [ "fluent_bit_source"]
 source = """
-. = map_keys(., recursive: true) -> |key| { replace(key, ".", "_") }"""
+.timestamp = now()"""
 
 [sinks.es_fluent_bit]
 type = "elasticsearch"
-inputs = [ "remap_keys_for_es" ]
+inputs = [ "remap_example" ]
 endpoint = "http://elasticsearch:9200"
 mode = "bulk"
 compression = "none"
