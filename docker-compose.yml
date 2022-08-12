@@ -36,6 +36,7 @@ services:
       - fluent-bit-vector-stack-network
     volumes:
       - ./conf/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./scripts/functions.lua:/fluent-bit/etc/functions.lua
       - ./sample:/sample
     depends_on:
      - loggenerator
