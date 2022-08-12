@@ -52,7 +52,7 @@ services:
       - kafka
       - vector
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.2.1
     container_name: zookeeper
     networks:
       - fluent-bit-vector-stack-network
@@ -62,7 +62,7 @@ services:
     ports:
       - 22181:2181
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.2.1
     container_name: kafka
     depends_on:
       - zookeeper
